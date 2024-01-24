@@ -43,7 +43,7 @@ def parse_file(file_path: str, output_path: str):
 
     print(f"[+] Read {total_bytes} bytes from {file_path} in {end - start:.2f} seconds")
 
-    decoded_ascii = ["".join(chr(int(byte, 16)) for byte in data[0] + data[1]).replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") for _, data in file_bytes]
+    decoded_ascii = ["".join(chr(int(byte, 16)) for byte in data[0] + data[1]).replace("\n", " ").replace("\r", " ").replace("\t", " ") for _, data in file_bytes]
 
     start = time.time()
     with open(output_path, "w", encoding="utf-8") as f:
