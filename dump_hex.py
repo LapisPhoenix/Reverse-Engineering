@@ -21,21 +21,25 @@ def parse_file(file_path: str, output_path: str):
     first_line = True
 
     start = time.time()
-    with open(file_path, 'rb') as f:
-        total_bytes = 0
-        for chunk in iter(lambda: f.read(16), b''):
-            total_bytes += len(chunk)
+    try:
+        with open(file_path, 'rb') as f:
+            total_bytes = 0
+            for chunk in iter(lambda: f.read(16), b''):
+                total_bytes += len(chunk)
 
-        f.seek(0)
+            f.seek(0)
 
-        print(f"[+] Reading {total_bytes} bytes from {file_path}")
-        for chunk in iter(lambda: f.read(16), b''):
-            info = [chunk[i:i+1].hex().upper() for i in range(0, len(chunk), 1)]
-            bytes_ = split_list(info)
-            bytes_[0] = pad_list(bytes_[0], 8)
-            bytes_[1] = pad_list(bytes_[1], 8)
-            file_bytes.append((format_address(address, total_bytes), bytes_))
-            address += 16
+            print(f"[+] Reading {total_bytes} bytes from {file_path}")
+            for chunk in iter(lambda: f.read(16), b''):
+                info = [chunk[i:i+1].hex().upper() for i in range(0, len(chunk), 1)]
+                bytes_ = split_list(info)
+                bytes_[0] = pad_list(bytes_[0], 8)
+                bytes_[1] = pad_list(bytes_[1], 8)
+                file_bytes.append((format_address(address, total_bytes), bytes_))
+                address += 16
+    except TypeError or FileNotFoundError:
+        print(f"[-] Failed to read {file_path}")
+        return
 
     end = time.time()
 
