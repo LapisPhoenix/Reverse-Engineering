@@ -1,6 +1,7 @@
 import argparse
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 def split_list(lst):
     half = len(lst) // 2
@@ -23,15 +24,12 @@ def parse_file(file_path: str, output_path: str):
     start = time.time()
     try:
         with open(file_path, 'rb') as f:
-            total_bytes = 0
-            for chunk in iter(lambda: f.read(16), b''):
-                total_bytes += len(chunk)
-
+            total_bytes = sum(1 for _ in f)
             f.seek(0)
 
             print(f"[+] Reading {total_bytes} bytes from {file_path}")
             for chunk in iter(lambda: f.read(16), b''):
-                info = [chunk[i:i+1].hex().upper() for i in range(0, len(chunk), 1)]
+                info = [chunk[i:i+1].hex().upper() for i in range(len(chunk))]
                 bytes_ = split_list(info)
                 bytes_[0] = pad_list(bytes_[0], 8)
                 bytes_[1] = pad_list(bytes_[1], 8)
@@ -45,14 +43,7 @@ def parse_file(file_path: str, output_path: str):
 
     print(f"[+] Read {total_bytes} bytes from {file_path} in {end - start:.2f} seconds")
 
-
-    decoded_ascii = []
-
-    for _, data in file_bytes:
-        ascii_ = []
-        for byte in data[0] + data[1]:
-            ascii_.append(chr(int(byte, 16)))
-        decoded_ascii.append("".join(ascii_).replace("\n", "").replace("\r", "").replace("\t", ""))
+    decoded_ascii = ["".join(chr(int(byte, 16)) for byte in data[0] + data[1]).replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") for _, data in file_bytes]
 
     start = time.time()
     with open(output_path, "w", encoding="utf-8") as f:
@@ -65,6 +56,12 @@ def parse_file(file_path: str, output_path: str):
     end = time.time()
 
     print(f"[+] Wrote {bytes_wrote} bytes to {output_path} in {end - start:.2f} seconds")
+
+
+def process_files(file_paths: list, output_paths: list):
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        for file_path, output_path in zip(file_paths, output_paths):
+            executor.submit(parse_file, file_path, output_path)
 
 
 if __name__ == "__main__":
@@ -80,12 +77,16 @@ if __name__ == "__main__":
     output = args.output
 
     if directory:
+        output_paths = []
+        input_paths = []
         if not os.path.exists(os.path.join(directory, "dumped")):
             os.makedirs(os.path.join(directory, "dumped"))
         for file_name in os.listdir(directory):
             file_path = os.path.join(directory, file_name)
             if os.path.isfile(file_path):
                 output_path = os.path.join(directory, "dumped", file_name + ".txt")
-                parse_file(file_path, output_path)
+                output_paths.append(output_path)
+                input_paths.append(file_path)
+        process_files(input_paths, output_paths)
     else:
         parse_file(file, output)
